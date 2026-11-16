@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shanay & Jazz · Our Little Diary</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#FFF8EC;--card:#FFFDF7;--blue:#BFDDF5;--blue2:#7FB2DE;--ink:#43566E;--soft:#8A9BB0;--line:#E6EEF6;--pink:#FFD9E0;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1D2733;--card:#26323F;--blue:#3A5878;--blue2:#8FC1EC;--ink:#EAF1F8;--soft:#9DB0C4;--line:#33445A;--pink:#5A3A45}}
+:root[data-theme="dark"]{--bg:#1D2733;--card:#26323F;--blue:#3A5878;--blue2:#8FC1EC;--ink:#EAF1F8;--soft:#9DB0C4;--line:#33445A;--pink:#5A3A45}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Fredoka','Nunito',ui-rounded,system-ui,sans-serif;font-size:16px;line-height:1.4}
+#app{max-width:520px;margin:0 auto;padding:16px 16px 96px}
+h1{font-size:24px;margin:4px 0 2px;text-align:center}
+.sub{text-align:center;color:var(--soft);margin:0 0 14px;font-size:14px}
+h2{font-size:18px;margin:18px 0 8px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:14px;margin-bottom:12px;box-shadow:0 4px 0 var(--line)}
+.card.me{border-color:var(--blue)}
+.card.pn{background:var(--pink);border-color:transparent;box-shadow:none}
+label{display:block;font-weight:500;margin:10px 0 4px;font-size:15px}
+textarea,input[type=text],input[type=date]{width:100%;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:10px 12px;font:inherit}
+textarea{min-height:64px;resize:vertical}
+textarea:focus,input:focus{outline:none;border-color:var(--blue2)}
+button{font:inherit;cursor:pointer;border:0;border-radius:999px;padding:10px 18px;background:var(--blue2);color:#fff;font-weight:500}
+button.ghost{background:var(--blue);color:var(--ink)}
+button.x{background:none;color:var(--soft);padding:4px 8px}
+.row{display:flex;gap:8px;align-items:center}.row>input{flex:1}
+.moods{display:flex;gap:6px;justify-content:space-between}
+.moods button{background:var(--bg);border:2px solid var(--line);font-size:26px;padding:6px 0;flex:1;border-radius:16px}
+.moods button.on{border-color:var(--blue2);background:var(--blue)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{background:var(--blue);color:var(--ink);padding:5px 11px;font-size:13px}
+.item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.item:last-child{border:0}.item span.t{flex:1}
+.item.done .t{text-decoration:line-through;color:var(--soft)}
+.box{width:26px;height:26px;border-radius:9px;border:2px solid var(--blue2);background:var(--bg);color:#fff;padding:0;font-size:15px;flex:none}
+.box.on{background:var(--blue2)}
+.q{color:var(--soft);font-size:13px;margin:8px 0 2px}
+.a{white-space:pre-wrap;margin:0 0 4px}
+.empty{color:var(--soft);text-align:center;padding:10px;font-size:14px}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:2px;background:var(--card);border-top:2px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px))}
+.tabs button{background:none;color:var(--soft);flex:1;max-width:100px;padding:6px 0;font-size:11px;border-radius:14px}
+.tabs button b{display:block;font-size:22px;font-weight:400}
+.tabs button.on{background:var(--blue);color:var(--ink)}
+.ev{display:flex;align-items:center;gap:12px;padding:8px 0}
+.ev .e{font-size:28px}.ev .n{flex:1}.ev small{color:var(--soft);display:block}
+.pill{background:var(--blue);border-radius:999px;padding:4px 12px;font-size:13px;white-space:nowrap}
+.pill.hot{background:var(--pink)}
+.seg{display:flex;gap:6px;margin-bottom:10px}.seg button{flex:1}
+.who{display:flex;gap:10px;margin-top:14px}.who button{flex:1;padding:16px;font-size:18px}
+</style>
+</head>
+<body>
+<div id="app"><p class="empty">Loading our little world… 💙</p></div>
+<script>
+const $app=document.getElementById('app');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const dkey=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const TODAY=()=>dkey(new Date());
+const MOODS=[['😭','Rough'],['😕','Meh'],['🙂','Okay'],['😊','Good'],['🥰','Amazing']];
+const BUILTIN=[{name:'New Year’s Day',m:1,d:1,e:'🎆'},{name:'Valentine’s Day',m:2,d:14,e:'💘'},{name:'Mother’s Day',m:12,d:22,e:'💐'},{name:'Christmas',m:12,d:25,e:'🎄'}];
+const IDEAS={done:['Picnic 🧺','Movie night 🍿','Sunset walk 🌇','Cook together 🍳','Coffee date ☕'],bucket:['Beach trip 🏖️','Stargazing ⭐','Concert together 🎶','Road trip 🚗','Matching outfits 👯']};
+let db,code='',me=null,tab='today',sub='done',loaded=false,pending=false;
+let S={people:[],entries:[],dates:[],wishes:[],events:[]};
+let draft={mood:'',day:'',happy:'',bother:'',sweet:''},drafted=false;
+const partner=()=>me==='Shanay'?'Jazz':'Shanay';
+const ent=(who,date)=>S.entries.find(e=>e.id===date+'_'+who);
+
+function nextOcc(m,d,yearly,full){
+  const t=new Date();t.setHours(0,0,0,0);
+  if(!yearly){const x=new Date(full+'T00:00:00');return x>=t?x:null}
+  let x=new Date(t.getFullYear(),m-1,d);if(x<t)x=new Date(t.getFullYear()+1,m-1,d);return x;
+}
+function allEvents(){
+  const t=new Date();t.setHours(0,0,0,0);const out=[];
+  BUILTIN.forEach(b=>out.push({...b,date:nextOcc(b.m,b.d,true),builtin:true}));
+  S.events.forEach(ev=>{const p=(ev.date||'').split('-');if(p.length<3)return;
+    const dt=nextOcc(+p[1],+p[2],ev.yearly,ev.date);if(dt)out.push({id:ev.id,name:ev.name,e:ev.emoji||'🎀',date:dt,yearly:ev.yearly})});
+  out.forEach(o=>o.left=Math.round((o.date-t)/864e5));
+  return out.sort((a,b)=>a.left-b.left);
+}
+const inDays=n=>n===0?'Today! 🎉':n===1?'Tomorrow':'in '+n+' days';
+const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
+function viewToday(){
+  const dk=TODAY(),pe=ent(partner(),dk),soon=allEvents().filter(e=>e.left<=14).slice(0,2);
+  const mood=draft.mood;
+  return `<h2>Hi, ${esc(me)}! 💙</h2>
+  ${soon.map(e=>`<div class="card pn row"><span style="font-size:28px">${e.e}</span><b>${esc(e.name)}</b>&nbsp;${inDays(e.left)}</div>`).join('')}
+  <div class="card me"><b>How was your day?</b>
+  <div class="moods" style="margin-top:8px">${MOODS.map((m,i)=>`<button data-act="mood" data-v="${i}" class="${mood===String(i)?'on':''}" title="${m[1]}">${m[0]}</button>`).join('')}</div>
+  <label>Tell us about your day</label><textarea data-f="day" placeholder="Today I…">${esc(draft.day)}</textarea>
+  <label>What made you happy today? ☀️</label><textarea data-f="happy" placeholder="Something that made me smile…">${esc(draft.happy)}</textarea>
+  <label>Anything bothering you? ☁️</label><textarea data-f="bother" placeholder="It’s okay to let it out…">${esc(draft.bother)}</textarea>
+  <label>A little note for ${esc(partner())} 💌</label><textarea data-f="sweet" placeholder="Optional">${esc(draft.sweet)}</textarea>
+  <p style="text-align:center;margin:14px 0 0"><button data-act="save">${ent(me,dk)?'Update today’s diary':'Save today’s diary'}</button></p></div>
+  <h2>${esc(partner())}’s day 🌷</h2>${pe?entryCard(pe,true):`<div class="card pn empty">${esc(partner())} hasn’t written today yet 🌙</div>`}`;
+}
+function entryCard(e,pn){
+  const m=MOODS[+e.mood];
+  const q=(l,v)=>v?`<div class="q">${l}</div><p class="a">${esc(v)}</p>`:'';
+  return `<div class="card ${pn?'pn':'me'}"><b>${esc(e.who)}</b> ${m?m[0]+' '+m[1]:''}${pn?'':'<span class="q"> · '+esc(e.date)+'</span>'}
+  ${q('Their day',e.day)}${q('Made them happy',e.happy)}${q('Bothering them',e.bother)}${q('A note 💌',e.sweet)}</div>`;
+}
+function viewJournal(){
+  const ds=[...new Set(S.entries.map(e=>e.date))].sort().reverse();
+  if(!ds.length)return `<h2>Our journal 📖</h2><div class="card empty">No entries yet. Write your first one today!</div>`;
+  return `<h2>Our journal 📖</h2>`+ds.map(d=>`<div class="q" style="margin:12px 4px 4px"><b>${esc(d)}</b></div>`+
+    ['Shanay','Jazz'].map(w=>ent(w,d)).filter(Boolean).map(e=>entryCard(e,e.who!==me)).join('')).join('');
+}
+function listBlock(kind){
+  const items=S.dates.filter(x=>x.kind===kind).sort((a,b)=>(a.done-b.done)||(b.ts-a.ts));
+  const done=items.filter(x=>x.done).length;
+  return `<div class="card"><div class="row"><input type="text" id="add" placeholder="${kind==='done'?'A date we did or want to do…':'A dream date…'}"><button data-act="adddate">Add</button></div>
+  <div class="chips">${IDEAS[kind].map(s=>`<button class="chip" data-act="idea" data-v="${esc(s)}">+ ${esc(s)}</button>`).join('')}</div></div>
+  <div class="card">${items.length?`<div class="q">${done} of ${items.length} checked ✨</div>`+items.map(x=>`<div class="item ${x.done?'done':''}"><button class="box ${x.done?'on':''}" data-act="tick" data-id="${x.id}">${x.done?'✓':''}</button><span class="t">${esc(x.text)}</span><button class="x" data-act="deldate" data-id="${x.id}">✕</button></div>`).join(''):'<div class="empty">Nothing here yet 🌱</div>'}</div>`;
+}
+function viewDates(){
+  return `<h2>Our dates 🗓️</h2><div class="seg"><button class="${sub==='done'?'':'ghost'}" data-act="sub" data-v="done">Date checklist</button><button class="${sub==='bucket'?'':'ghost'}" data-act="sub" data-v="bucket">Bucket list</button></div>`+listBlock(sub);
+}
+function viewEvents(){
+  const ev=allEvents();
+  return `<h2>Special days 🎀</h2><div class="card">`+ev.map(e=>`<div class="ev"><span class="e">${e.e}</span><div class="n"><b>${esc(e.name)}</b><small>${fmt(e.date)}${e.yearly?' · every year':''}</small></div><span class="pill ${e.left<=7?'hot':''}">${inDays(e.left)}</span>${e.builtin?'':`<button class="x" data-act="delev" data-id="${e.id}">✕</button>`}</div>`).join('')+`</div>
+  <div class="card"><b>Add a special day</b>
+  <label>Name</label><input type="text" id="evn" placeholder="Shanay’s birthday, our anniversary…">
+  <label>Date</label><input type="date" id="evd">
+  <label><input type="checkbox" id="evy" checked> Repeat every year</label>
+  <div class="chips">${['🎂','💍','🎁','✈️','💞'].map(x=>`<button class="chip" data-act="emoji" data-v="${x}">${x}</button>`).join('')}<span class="q" id="evsel" style="align-self:center">🎀</span></div>
+  <p style="text-align:center;margin:12px 0 0"><button data-act="addev">Add</button></p></div>`;
+}
+function viewWishes(){
+  const box=w=>{const it=S.wishes.filter(x=>x.who===w).sort((a,b)=>(a.got-b.got)||(b.ts-a.ts));
+    return `<h2>${w===me?'My wishlist':esc(w)+'’s wishlist'} ${w===me?'🎁':'🧸'}</h2><div class="card ${w===me?'me':''}">`+
+    (it.length?it.map(x=>`<div class="item ${x.got?'done':''}"><button class="box ${x.got?'on':''}" data-act="got" data-id="${x.id}" title="Mark as got">${x.got?'✓':''}</button><span class="t">${esc(x.text)}</span>${w===me?`<button class="x" data-act="delwish" data-id="${x.id}">✕</button>`:''}</div>`).join(''):'<div class="empty">Nothing yet</div>')+`</div>`};
+  return box(me)+`<div class="card"><div class="row"><input type="text" id="wish" placeholder="I wish for…"><button data-act="addwish">Add</button></div></div>`+box(partner());
+}
+function render(){
+  if(!loaded){return}
+  if(!code){$app.innerHTML=`<h1>Shanay & Jazz 💙</h1><p class="sub">Our little diary</p><div class="card"><b>Our secret code 🔑</b><p class="q">Pick any code (6+ letters/numbers) and use the exact same code on both phones. This is what connects you two.</p><div class="row"><input type="text" id="code" placeholder="e.g. shanayjazz2026"><button data-act="setcode">Go</button></div></div>`;return}
+  if(!me){$app.innerHTML=`<h1>Shanay & Jazz 💙</h1><p class="sub">Our little diary</p><div class="card"><b>Who’s using this phone?</b><div class="who"><button data-act="who" data-v="Shanay">Shanay</button><button data-act="who" data-v="Jazz">Jazz</button></div></div>`;return}
+  const views={today:viewToday,journal:viewJournal,dates:viewDates,events:viewEvents,wishes:viewWishes};
+  $app.innerHTML=`<h1>Shanay & Jazz 💙</h1><p class="sub">Our little diary</p>${views[tab]()}
+  <nav class="tabs">${[['today','🏠','Today'],['journal','📖','Journal'],['dates','🗓️','Dates'],['events','🎀','Events'],['wishes','🎁','Wishes']].map(t=>`<button data-act="tab" data-v="${t[0]}" class="${tab===t[0]?'on':''}"><b>${t[1]}</b>${t[2]}</button>`).join('')}</nav>`;
+}
+function softRender(){
+  const a=document.activeElement;
+  if(a&&$app.contains(a)&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT')){pending=true;return}
+  render();
+}
+document.addEventListener('focusout',()=>{if(pending){pending=false;setTimeout(()=>{const a=document.activeElement;if(!(a&&$app.contains(a)&&/TEXTAREA|INPUT/.test(a.tagName)))render()},150)}});
+$app.addEventListener('input',e=>{const f=e.target.dataset&&e.target.dataset.f;if(f)draft[f]=e.target.value});
+let evEmoji='🎀';
+const col=n=>db.collection('rooms').doc(code).collection(n);
+const val=id=>{const el=document.getElementById(id);return el?el.value.trim():''};
+$app.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act,v=b.dataset.v,id=b.dataset.id;
+  try{
+  if(a==='tab'){tab=v;render();window.scrollTo(0,0)}
+  else if(a==='sub'){sub=v;render()}
+  else if(a==='who'){me=v;try{localStorage.setItem('sj_me',v)}catch(x){}render()}
+  else if(a==='setcode'){const c=val('code').toLowerCase().replace(/\s+/g,'');if(c.length<6){alert('Please use at least 6 characters 💙');return}
+    code=c;try{localStorage.setItem('sj_code',c)}catch(x){}start();render()}
+  else if(a==='mood'){draft.mood=v;render()}
+  else if(a==='save'){
+    const dk=TODAY();b.textContent='Saving…';
+    await col('entries').doc(dk+'_'+me).set({who:me,date:dk,mood:draft.mood,day:draft.day,happy:draft.happy,bother:draft.bother,sweet:draft.sweet,ts:Date.now()});
+    b.textContent='Saved 💙';
+  }
+  else if(a==='adddate'||a==='idea'){
+    const text=a==='idea'?v:val('add');if(!text)return;
+    await col('dates').doc('d'+Date.now()).set({kind:sub,text,done:false,by:me,ts:Date.now()});
+  }
+  else if(a==='tick'){const x=S.dates.find(d=>d.id===id);await col('dates').doc(id).update({done:!x.done,doneDate:x.done?'':TODAY()})}
+  else if(a==='deldate'){await col('dates').doc(id).delete()}
+  else if(a==='emoji'){evEmoji=v;document.getElementById('evsel').textContent=v}
+  else if(a==='addev'){
+    const name=val('evn'),date=val('evd');if(!name||!date)return;
+    await col('events').doc('e'+Date.now()).set({name,date,yearly:document.getElementById('evy').checked,emoji:evEmoji,by:me,ts:Date.now()});evEmoji='🎀';
+  }
+  else if(a==='delev'){await col('events').doc(id).delete()}
+  else if(a==='addwish'){const text=val('wish');if(!text)return;await col('wishes').doc('w'+Date.now()).set({who:me,text,got:false,ts:Date.now()})}
+  else if(a==='got'){const x=S.wishes.find(w=>w.id===id);await col('wishes').doc(id).update({got:!x.got})}
+  else if(a==='delwish'){await col('wishes').doc(id).delete()}
+  }catch(err){console.error(err);alert('Oops, that didn’t save. Please try again 💙')}
+});
+function start(){
+  ['entries','dates','wishes','events'].forEach(n=>{
+    col(n).onSnapshot(snap=>{
+      S[n]=snap.docs.map(d=>({id:d.id,...d.data()}));
+      if(n==='entries'&&me&&!drafted){const mine=ent(me,TODAY());if(mine){drafted=true;draft={mood:String(mine.mood==null?'':mine.mood),day:mine.day||'',happy:mine.happy||'',bother:mine.bother||'',sweet:mine.sweet||''}}}
+      softRender();
+    },err=>{console.error(err);$app.innerHTML='<p class="empty">Can’t connect. Check Firebase rules & internet 💙</p>'});
+  });
+}
+// ====== PASTE YOUR FIREBASE CONFIG HERE ======
+const FIREBASE_CONFIG={apiKey:"AIzaSyCRRjgROC-YhJGT_2alu0T6E_k8rgxc5Fc",authDomain:"shanay-jazz.firebaseapp.com",projectId:"shanay-jazz",appId:"1:585734571829:web:fe54e9400aab351c2a6e7c"};
+// =============================================
+(function(){
+  try{me=localStorage.getItem('sj_me')||null;code=localStorage.getItem('sj_code')||''}catch(e){}
+  loaded=true;
+  if(FIREBASE_CONFIG.apiKey.indexOf('PASTE')===0){$app.innerHTML='<p class="empty">Firebase isn’t set up yet. Paste your config into the file 💙</p>';return}
+  firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();
+  if(code)start();render();
+})();
+</script>
+</body>
+</html>
